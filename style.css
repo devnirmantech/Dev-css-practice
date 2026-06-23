@@ -1,13 +1,6 @@
-h1{
-    color :green;
+*{
+color:blue;
 }
-p{
-    color:blue;
+h1{color:#35FF00;
 }
-button{
-    color: green;
-    background-color:rgb(210,110,100);
-}
-body{
-    background-color: #CD2323
-}
+p{color:#BC00FF;}
