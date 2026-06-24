@@ -2,10 +2,20 @@ p {
   text-align :end;
 }
 
-h2 {
-  text-align: center;
-  text-decoration: line-through;
-}
-a{
+a {
   text-decoration:none;
 }
+
+#h1 {
+    font-weight: 150;
+}
+#h2 {
+     font-weight: 260;
+}
+#h3{
+   font-weight: 300;
+}
+#h4 {
+    font-weight: 400;
+}
+
