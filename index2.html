@@ -1,26 +1,175 @@
+
+ 
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Web Page</title>
-    <<link rel="stylesheet"href="style2.css">
-  </head>
-  <body>
- 
-<div class="card-container">
-    <div class="cyber-card">
-        <div class="card-glow"></div>
-        <div class="card-content">
-            <h2>CYBERPUNK</h2>
-            <p>Pure CSS 3D Hologram Effect</p>
-            <button>Activate</button>
-        </div>
-    </div>
-</div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For Bhaiya 🚀</title>
+    <style>
+        /* Reset default browser gaps */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
 
-    
-    
-    
-  </body>
+        /* Space background */
+        body {
+            background: radial-gradient(circle at center, #0c102b, #030511);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Moving Stars in Background */
+        body::before {
+            content: "";
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px);
+            background-size: 550px 550px, 350px 350px;
+            background-position: 0 0, 40px 60px;
+            animation: spaceMove 60s linear infinite;
+            opacity: 0.5;
+            z-index: 1;
+        }
+
+        @keyframes spaceMove {
+            from { transform: translate(0, 0); }
+            to { transform: translate(-50%, -50%); }
+        }
+
+        /* Center Text Container */
+        .content {
+            text-align: center;
+            color: white;
+            z-index: 10;
+            pointer-events: none; /* Text cursor ko block nahi karega */
+        }
+
+        .content h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
+            background: linear-gradient(45deg, #00f2fe, #4facfe, #ff0844);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .content p {
+            font-size: 1.1rem;
+            color: #8a8a9e;
+            letter-spacing: 1px;
+        }
+
+        /* The Moving Rocket Element */
+        .rocket-cursor {
+            position: fixed;
+            width: 50px;
+            height: 50px;
+            font-size: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%) rotate(45deg);
+            transition: transform 0.1s ease-out;
+            filter: drop-shadow(0 0 10px #ff0844);
+        }
+
+        /* Smoke/Fire Effect trail */
+        .smoke {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(#ff0844, #ffb108);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            box-shadow: 0 0 10px #ff0844;
+            animation: fadeSmoke 0.6s linear forwards;
+        }
+
+        @keyframes fadeSmoke {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Heading for Bhaiya -->
+    <div class="content">
+        <h1>YOU ARE OUT OF THIS WORLD, BHAIYA!</h1>
+        <p>Touch anywhere on the screen to launch the rocket 🚀</p>
+    </div>
+
+    <!-- Rocket Emoji Element -->
+    <div class="rocket-cursor" id="rocket">🚀</div>
+
+    <!-- Small Javascript to make it move on touch/mouse move -->
+    <script>
+        const rocket = document.getElementById('rocket');
+        let currentX = window.innerWidth / 2;
+        let currentY = window.innerHeight / 2;
+        let targetX = currentX;
+        let targetY = currentY;
+
+        // Smooth movement animation
+        function animate() {
+            currentX += (targetX - currentX) * 0.15;
+            currentY += (targetY - currentY) * 0.15;
+            
+            rocket.style.left = currentX + 'px';
+            rocket.style.top = currentY + 'px';
+            
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Mouse or Touch Move function
+        function moveRocket(e) {
+            let x = e.clientX || (e.touches && e.touches[0].clientX);
+            let y = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (x && y) {
+                targetX = x;
+                targetY = y;
+                createSmoke(x, y);
+            }
+        }
+
+        // Rocket ke piche fire/smoke tail banane ke liye
+        function createSmoke(x, y) {
+            const smoke = document.createElement('div');
+            smoke.classList.add('smoke');
+            // Thoda rocket ke piche set karne ke liye calculation
+            smoke.style.left = (x - 5) + 'px';
+            smoke.style.top = (y + 15) + 'px';
+            document.body.appendChild(smoke);
+            
+            setTimeout(() => {
+                smoke.remove();
+            }, 600);
+        }
+
+        // Events listeners for both Laptop (Mouse) and Mobile (Touch)
+        window.addEventListener('mousemove', moveRocket);
+        window.addEventListener('touchmove', moveRocket);
+    </script>
+</body>
 </html>
+
+  
+
