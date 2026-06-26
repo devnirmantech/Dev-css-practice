@@ -3,19 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Wormhole</title>
+    <title>Hold to Trigger Lightning Storm</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #020205; overflow: hidden; width: 100vw; height: 100vh; }
-        canvas { display: block; position: absolute; top:0; left:0; will-change: transform; filter: drop-shadow(0 0 10px #ff0055); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #020204;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform;
+            filter: drop-shadow(0 0 12px #00ffff);
+        }
+        .instruction {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 16px;
+            letter-spacing: 3px;
+            pointer-events: none;
+            z-index: 10;
+            text-transform: uppercase;
+            animation: pulse 1.5s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.2; }
+            100% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
-    <canvas id="wormholeCanvas"></canvas>
+
+    <div class="instruction">CLICK & HOLD ANYWHERE TO UNLEASH STORM</div>
+    <canvas id="lightningCanvas"></canvas>
+
     <script>
-        const canvas = document.getElementById('wormholeCanvas');
+        const canvas = document.getElementById('lightningCanvas');
         const ctx = canvas.getContext('2d');
-        
+
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -23,60 +59,101 @@
         resize();
         window.addEventListener('resize', resize);
 
-        const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        window.addEventListener('mousemove', (e) => {
+        const mouse = { x: 0, y: 0 };
+        let isHolding = false; // Hold state track karne ke liye
+
+        // Mouse events for Hold functionality
+        window.addEventListener('mousedown', (e) => {
+            isHolding = true;
             mouse.x = e.clientX;
             mouse.y = e.clientY;
         });
 
-        class Particle {
-            constructor() {
-                this.reset();
-            }
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.z = Math.random() * canvas.width; // Depth factor
-                this.color = Math.random() > 0.5 ? '#ff0055' : '#00ffff';
-            }
-            update() {
-                this.z -= 4; // Particle ko paas laane ke liye speed
-                if (this.z <= 0) this.reset();
+        window.addEventListener('mouseup', () => {
+            isHolding = false;
+        });
 
-                // Gravity pull towards mouse
-                this.x += (mouse.x - this.x) * 0.02;
-                this.y += (mouse.y - this.y) * 0.02;
+        window.addEventListener('mousemove', (e) => {
+            if (isHolding) {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
             }
-            draw() {
-                // 3D Projection math logic
-                const k = 128 / this.z;
-                const px = (this.x - canvas.width / 2) * k + canvas.width / 2;
-                const py = (this.y - canvas.height / 2) * k + canvas.height / 2;
-                const size = (1 - this.z / canvas.width) * 4;
+        });
 
-                if (px >= 0 && px <= canvas.width && py >= 0 && py <= canvas.height) {
-                    ctx.fillStyle = this.color;
-                    ctx.beginPath();
-                    ctx.arc(px, py, Math.max(0.5, size), 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    this.reset();
+        // Touch support for mobile users
+        window.addEventListener('touchstart', (e) => {
+            isHolding = true;
+            if(e.touches[0]) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+            }
+        });
+        window.addEventListener('touchend', () => isHolding = false);
+        window.addEventListener('touchmove', (e) => {
+            if (isHolding && e.touches[0]) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+            }
+        });
+
+        // Recursive Lightning Path generator (Fractal math logic)
+        function createLightning(startX, startY, endX, endY, segments, displace) {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            let currentX = startX;
+            let currentY = startY;
+
+            for (let i = 1; i <= segments; i++) {
+                let t = i / segments;
+                let targetX = startX + (endX - startX) * t;
+                let targetY = startY + (endY - startY) * t;
+
+                // Random zig-zag displacement calculation
+                if (i < segments) {
+                    targetX += (Math.random() - 0.5) * displace;
+                    targetY += (Math.random() - 0.5) * displace;
                 }
-            }
-        }
 
-        const particles = Array.from({ length: 350 }, () => new Particle());
+                ctx.lineTo(targetX, targetY);
+                currentX = targetX;
+                currentY = targetY;
+            }
+            ctx.stroke();
+        }
 
         function animate() {
-            ctx.fillStyle = 'rgba(2, 2, 5, 0.2)'; // Smooth trail effect
+            // Speed Optimize Trail: Halka fade effect jisse purani bijli turant saaf ho jaye aur lag na kare
+            ctx.fillStyle = 'rgba(2, 2, 4, 0.25)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
+            if (isHolding) {
+                // Screen ka center point jahan se bijli niklegi
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                // Har frame par 3 alag colors ki lightning lines draw karna
+                const colors = ['#00ffff', '#ff00ff', '#ffffff'];
+                
+                for (let i = 0; i < 3; i++) {
+                    ctx.strokeStyle = colors[i];
+                    ctx.lineWidth = Math.random() * 3 + 1;
+                    
+                    // Main bolt
+                    createLightning(centerX, centerY, mouse.x, mouse.y, 12, 45);
+                    
+                    // Branching: side me tootne wali chhoti bijliyan
+                    if (Math.random() > 0.6) {
+                        let branchX = mouse.x + (Math.random() - 0.5) * 150;
+                        let branchY = mouse.y + (Math.random() - 0.5) * 150;
+                        createLightning(centerX, centerY, branchX, branchY, 8, 30);
+                    }
+                }
+            }
+
             requestAnimationFrame(animate);
         }
+
         animate();
     </script>
 </body>
