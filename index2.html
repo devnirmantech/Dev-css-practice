@@ -3,158 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hold to Trigger Lightning Storm</title>
+    <title>Retro Space Shooter Game</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background-color: #020204;
+            background-color: #050510;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: sans-serif;
+            font-family: 'Courier New', Courier, monospace;
         }
         canvas {
+            background-color: #020205;
             display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
+            border: 2px solid #390099;
+            box-shadow: 0 0 20px #390099;
             will-change: transform;
-            filter: drop-shadow(0 0 12px #00ffff);
-        }
-        .instruction {
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 16px;
-            letter-spacing: 3px;
-            pointer-events: none;
-            z-index: 10;
-            text-transform: uppercase;
-            animation: pulse 1.5s infinite alternate;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.2; }
-            100% { opacity: 0.7; }
         }
     </style>
 </head>
 <body>
 
-    <div class="instruction">CLICK & HOLD ANYWHERE TO UNLEASH STORM</div>
-    <canvas id="lightningCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('lightningCanvas');
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resize();
-        window.addEventListener('resize', resize);
+        // Fixed game board resolution
+        canvas.width = 480;
+        canvas.height = 640;
 
-        const mouse = { x: 0, y: 0 };
-        let isHolding = false; // Hold state track karne ke liye
+        // Game states
+        let score = 0;
+        let lives = 3;
+        let gameOver = false;
+        let enemies = [];
+        let bullets = [];
 
-        // Mouse events for Hold functionality
-        window.addEventListener('mousedown', (e) => {
-            isHolding = true;
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        });
+        // Player SpaceShip Object
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 60,
+            w: 40,
+            h: 30,
+            color: '#00ffff'
+        };
 
-        window.addEventListener('mouseup', () => {
-            isHolding = false;
-        });
-
+        // Mouse tracking for controls
         window.addEventListener('mousemove', (e) => {
-            if (isHolding) {
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
-            }
+            if (gameOver) return;
+            // Canvas ki absolute position screen par nikalna
+            const rect = canvas.getBoundingClientRect();
+            // Spaceship ko center align karke canvas boundary ke andar rakhna
+            player.x = (e.clientX - rect.left) - player.w / 2;
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
         });
 
-        // Touch support for mobile users
-        window.addEventListener('touchstart', (e) => {
-            isHolding = true;
-            if(e.touches[0]) {
-                mouse.x = e.touches[0].clientX;
-                mouse.y = e.touches[0].clientY;
+        // Click to shoot
+        window.addEventListener('click', () => {
+            if (gameOver) {
+                resetGame();
+                return;
             }
-        });
-        window.addEventListener('touchend', () => isHolding = false);
-        window.addEventListener('touchmove', (e) => {
-            if (isHolding && e.touches[0]) {
-                mouse.x = e.touches[0].clientX;
-                mouse.y = e.touches[0].clientY;
-            }
+            // Bullet launch points (Center of the ship)
+            bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 4, h: 10, speed: 7 });
         });
 
-        // Recursive Lightning Path generator (Fractal math logic)
-        function createLightning(startX, startY, endX, endY, segments, displace) {
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            
-            let currentX = startX;
-            let currentY = startY;
+        // Enemy spawning logic
+        function spawnEnemy() {
+            if (gameOver) return;
+            const size = Math.random() * 20 + 20; // Varied alien sizes
+            enemies.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                w: size,
+                h: size,
+                speed: Math.random() * 1.5 + 1,
+                color: `hsl(${Math.random() * 60 + 340}, 100%, 60%)` // Red/Pink tones
+            });
+        }
+        setInterval(spawnEnemy, 1000); // Har 1 second me naya alien aayega
 
-            for (let i = 1; i <= segments; i++) {
-                let t = i / segments;
-                let targetX = startX + (endX - startX) * t;
-                let targetY = startY + (endY - startY) * t;
-
-                // Random zig-zag displacement calculation
-                if (i < segments) {
-                    targetX += (Math.random() - 0.5) * displace;
-                    targetY += (Math.random() - 0.5) * displace;
-                }
-
-                ctx.lineTo(targetX, targetY);
-                currentX = targetX;
-                currentY = targetY;
-            }
-            ctx.stroke();
+        // Collision Detector Function (Hit Box Calculation)
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.w &&
+                   rect1.x + rect1.w > rect2.x &&
+                   rect1.y < rect2.y + rect2.h &&
+                   rect1.y + rect1.h > rect2.y;
         }
 
-        function animate() {
-            // Speed Optimize Trail: Halka fade effect jisse purani bijli turant saaf ho jaye aur lag na kare
-            ctx.fillStyle = 'rgba(2, 2, 4, 0.25)';
+        // Restart logic
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            enemies = [];
+            bullets = [];
+            gameOver = false;
+        }
+
+        // Main Loop Engine
+        function gameLoop() {
+            // Screen clear
+            ctx.fillStyle = '#020205';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (isHolding) {
-                // Screen ka center point jahan se bijli niklegi
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
+            if (!gameOver) {
+                // 1. Move and Draw Bullets
+                for (let b = bullets.length - 1; b >= 0; b--) {
+                    bullets[b].y -= bullets[b].speed;
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(bullets[b].x, bullets[b].y, bullets[b].w, bullets[b].h);
+                    
+                    // Out of screen bullets delete karna
+                    if (bullets[b].y < 0) bullets.splice(b, 1);
+                }
 
-                // Har frame par 3 alag colors ki lightning lines draw karna
-                const colors = ['#00ffff', '#ff00ff', '#ffffff'];
-                
-                for (let i = 0; i < 3; i++) {
-                    ctx.strokeStyle = colors[i];
-                    ctx.lineWidth = Math.random() * 3 + 1;
-                    
-                    // Main bolt
-                    createLightning(centerX, centerY, mouse.x, mouse.y, 12, 45);
-                    
-                    // Branching: side me tootne wali chhoti bijliyan
-                    if (Math.random() > 0.6) {
-                        let branchX = mouse.x + (Math.random() - 0.5) * 150;
-                        let branchY = mouse.y + (Math.random() - 0.5) * 150;
-                        createLightning(centerX, centerY, branchX, branchY, 8, 30);
+                // 2. Move and Draw Enemies
+                for (let e = enemies.length - 1; e >= 0; e--) {
+                    enemies[e].y += enemies[e].speed;
+                    ctx.fillStyle = enemies[e].color;
+                    ctx.fillRect(enemies[e].x, enemies[e].y, enemies[e].w, enemies[e].h);
+
+                    // Check bullet hit enemy
+                    for (let b = bullets.length - 1; b >= 0; b--) {
+                        if (checkCollision(bullets[b], enemies[e])) {
+                            enemies.splice(e, 1);
+                            bullets.splice(b, 1);
+                            score += 10;
+                            break;
+                        }
+                    }
+
+                    if (!enemies[e]) continue;
+
+                    // Check enemy hit player
+                    if (checkCollision(enemies[e], player)) {
+                        enemies.splice(e, 1);
+                        lives--;
+                        if (lives <= 0) gameOver = true;
+                        continue;
+                    }
+
+                    // Bottom reach condition
+                    if (enemies[e].y > canvas.height) {
+                        enemies.splice(e, 1);
+                        lives--;
+                        if (lives <= 0) gameOver = true;
                     }
                 }
+
+                // 3. Draw Player Spaceship
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.w / 2, player.y);
+                ctx.lineTo(player.x, player.y + player.h);
+                ctx.lineTo(player.x + player.w, player.y + player.h);
+                ctx.closePath();
+                ctx.fill();
+
+                // 4. Draw HUD Dashboard (Score & Lives)
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Courier New';
+                ctx.fillText(`SCORE: ${score}`, 20, 30);
+                ctx.fillText(`LIVES: ${'❤️'.repeat(lives)}`, canvas.width - 140, 30);
+
+            } else {
+                // Game Over Screen Template
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#ff0055';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Courier New';
+                ctx.fillText(`FINAL SCORE: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText("CLICK ANYWHERE TO RESTART", canvas.width / 2, canvas.height / 2 + 60);
+                ctx.textAlign = 'start'; // Reset alignment
             }
 
-            requestAnimationFrame(animate);
+            requestAnimationFrame(gameLoop);
         }
 
-        animate();
+        // Start
+        gameLoop();
     </script>
 </body>
 </html>
