@@ -3,175 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High Performance Cyber Scorpion</title>
+    <title>Cyber Wormhole</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            background-color: #030308;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            cursor: none;
-        }
-        canvas {
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            /* Performance Hack: CSS layer hardware acceleration switch on karein */
-            will-change: transform;
-            filter: drop-shadow(0px 0px 8px #00ffcc);
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #020205; overflow: hidden; width: 100vw; height: 100vh; }
+        canvas { display: block; position: absolute; top:0; left:0; will-change: transform; filter: drop-shadow(0 0 10px #ff0055); }
     </style>
 </head>
 <body>
-    <canvas id="matrixCanvas"></canvas>
-
+    <canvas id="wormholeCanvas"></canvas>
     <script>
-        const canvas = document.getElementById('matrixCanvas');
+        const canvas = document.getElementById('wormholeCanvas');
         const ctx = canvas.getContext('2d');
-
+        
         function resize() {
-            // High-DPI reset lag free calculations ke liye
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
         resize();
         window.addEventListener('resize', resize);
 
-        const mouse = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            targetX: window.innerWidth / 2,
-            targetY: window.innerHeight / 2,
-            angle: 0
-        };
-
+        const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         window.addEventListener('mousemove', (e) => {
-            mouse.targetX = e.clientX;
-            mouse.targetY = e.clientY;
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
         });
 
-        class IKChain {
-            constructor(numSegments, segLength, baseWidth) {
-                this.numSegments = numSegments;
-                this.segLength = segLength;
-                this.baseWidth = baseWidth;
-                this.x = new Array(numSegments).fill(mouse.x);
-                this.y = new Array(numSegments).fill(mouse.y);
-                this.angles = new Array(numSegments).fill(0);
+        class Particle {
+            constructor() {
+                this.reset();
             }
-
-            update(targetX, targetY) {
-                let dx = targetX - this.x[0];
-                let dy = targetY - this.y[0];
-                this.angles[0] = Math.atan2(dy, dx);
-                this.x[0] = targetX - Math.cos(this.angles[0]) * this.segLength;
-                this.y[0] = targetY - Math.sin(this.angles[0]) * this.segLength;
-
-                for (let i = 1; i < this.numSegments; i++) {
-                    dx = this.x[i - 1] - this.x[i];
-                    dy = this.y[i - 1] - this.y[i];
-                    this.angles[i] = Math.atan2(dy, dx);
-                    this.x[i] = this.x[i - 1] - Math.cos(this.angles[i]) * this.segLength;
-                    this.y[i] = this.y[i - 1] - Math.sin(this.angles[i]) * this.segLength;
-                }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.z = Math.random() * canvas.width; // Depth factor
+                this.color = Math.random() > 0.5 ? '#ff0055' : '#00ffff';
             }
+            update() {
+                this.z -= 4; // Particle ko paas laane ke liye speed
+                if (this.z <= 0) this.reset();
 
-            draw(strokeColor, isTail = false) {
-                ctx.strokeStyle = strokeColor;
-                ctx.fillStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                // Gravity pull towards mouse
+                this.x += (mouse.x - this.x) * 0.02;
+                this.y += (mouse.y - this.y) * 0.02;
+            }
+            draw() {
+                // 3D Projection math logic
+                const k = 128 / this.z;
+                const px = (this.x - canvas.width / 2) * k + canvas.width / 2;
+                const py = (this.y - canvas.height / 2) * k + canvas.height / 2;
+                const size = (1 - this.z / canvas.width) * 4;
 
-                // Continuous fast skeletal rendering
-                ctx.beginPath();
-                ctx.moveTo(this.x[0], this.y[0]);
-                for (let i = 1; i < this.numSegments; i++) {
-                    ctx.lineTo(this.x[i], this.y[i]);
-                }
-                ctx.stroke();
-
-                for (let i = 0; i < this.numSegments; i++) {
-                    let size = this.baseWidth * (1 - i / this.numSegments);
-                    if (isTail && i === 0) size = this.baseWidth * 1.5;
-
+                if (px >= 0 && px <= canvas.width && py >= 0 && py <= canvas.height) {
+                    ctx.fillStyle = this.color;
                     ctx.beginPath();
-                    ctx.arc(this.x[i], this.y[i], Math.max(1, size), 0, Math.PI * 2);
+                    ctx.arc(px, py, Math.max(0.5, size), 0, Math.PI * 2);
                     ctx.fill();
-
-                    if (i > 0 && i < this.numSegments - 2 && i % 2 === 0) {
-                        let ortho = this.angles[i] + Math.PI / 2;
-                        let w = size * 2;
-                        ctx.beginPath();
-                        ctx.moveTo(this.x[i], this.y[i]);
-                        ctx.lineTo(this.x[i] + Math.cos(ortho) * w, this.y[i] + Math.sin(ortho) * w);
-                        ctx.moveTo(this.x[i], this.y[i]);
-                        ctx.lineTo(this.x[i] - Math.cos(ortho) * w, this.y[i] - Math.sin(ortho) * w);
-                        ctx.stroke();
-                    }
+                } else {
+                    this.reset();
                 }
             }
         }
 
-        const tail = new IKChain(20, 12, 8); 
-        const leftPincer = new IKChain(5, 14, 5);
-        const rightPincer = new IKChain(5, 14, 5);
-
-        let time = 0;
+        const particles = Array.from({ length: 350 }, () => new Particle());
 
         function animate() {
-            // Speed Optimize: Fade ke liye clearRect use kiya taaki cache build na ho
-            ctx.fillStyle = 'rgba(3, 3, 8, 0.3)';
+            ctx.fillStyle = 'rgba(2, 2, 5, 0.2)'; // Smooth trail effect
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            time += 0.08;
 
-            mouse.x += (mouse.targetX - mouse.x) * 0.15;
-            mouse.y += (mouse.targetY - mouse.y) * 0.15;
-
-            let dx = mouse.targetX - mouse.x;
-            let dy = mouse.targetY - mouse.y;
-            mouse.angle = Math.atan2(dy, dx);
-
-            tail.update(mouse.x, mouse.y);
-
-            let pincerAngleSpread = 0.5;
-            let pincerDist = 40;
-            
-            let leftPincerTargetX = mouse.x + Math.cos(mouse.angle - pincerAngleSpread) * pincerDist;
-            let leftPincerTargetY = mouse.y + Math.sin(mouse.angle - pincerAngleSpread) * pincerDist;
-            leftPincer.update(leftPincerTargetX, leftPincerTargetY);
-
-            let rightPincerTargetX = mouse.x + Math.cos(mouse.angle + pincerAngleSpread) * pincerDist;
-            let rightPincerTargetY = mouse.y + Math.sin(mouse.angle + pincerAngleSpread) * pincerDist;
-            rightPincer.update(rightPincerTargetX, rightPincerTargetY);
-
-            tail.draw('#00ffcc', true);
-            leftPincer.draw('#00ff66');
-            rightPincer.draw('#00ff66');
-
-            // Fast Leg rendering loop
-            ctx.strokeStyle = '#00ffcc';
-            for (let l = 3; l < 9; l += 2) {
-                if(tail.x[l]) {
-                    let sideAngle = tail.angles[l] + Math.PI/2;
-                    let legLength = 35 + Math.sin(time + l) * 4;
-
-                    ctx.beginPath();
-                    ctx.moveTo(tail.x[l], tail.y[l]);
-                    ctx.lineTo(tail.x[l] + Math.cos(sideAngle)*legLength, tail.y[l] + Math.sin(sideAngle)*legLength);
-                    ctx.moveTo(tail.x[l], tail.y[l]);
-                    ctx.lineTo(tail.x[l] - Math.cos(sideAngle)*legLength, tail.y[l] - Math.sin(sideAngle)*legLength);
-                    ctx.stroke();
-                }
-            }
-
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
             requestAnimationFrame(animate);
         }
-
         animate();
     </script>
 </body>
