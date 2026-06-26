@@ -2,231 +2,264 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D GTA Style Mini City Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro GTA Mobile City</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #05050a; overflow: hidden; width: 100vw; height: 100vh; font-family: 'Segoe UI', sans-serif; }
-        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        #instructions {
+        body {
+            background-color: #111;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #00ffff;
-            background: rgba(10, 10, 25, 0.85);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #00ffff;
+            top: 0;
+            left: 0;
+            will-change: transform;
+        }
+        /* Mobile Controls Styling */
+        .controls-container {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        .btn {
+            width: 65px;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .btn:active {
+            background: rgba(0, 255, 200, 0.5);
+            border-color: #00ffcc;
+        }
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #00ffcc;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
             font-size: 14px;
             pointer-events: none;
-            line-height: 1.6;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-        }
-        #speedometer {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            color: #ff0055;
-            font-size: 24px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px 20px;
-            border-radius: 5px;
-            border-left: 5px solid #ff0055;
+            border-left: 4px solid #00ffcc;
         }
     </style>
-    <!-- Three.js CDN link for rendering hardcore 3D Graphics -->
-    <script src="https://cloudflare.com"></script>
 </head>
 <body>
 
-    <div id="instructions">
-        <strong>GTA 5 MINIMUM 3D CITY PROTOTYPE</strong><br>
-        • Drive: <b>W, A, S, D</b> or <b>Arrow Keys</b><br>
-        • Handbrake: <b>Spacebar</b><br>
-        • Camera: Follows behind the car automatically
+    <div id="hud">GTA RETRO CITY | SPEED: <span id="speed">0</span> KM/H</div>
+
+    <!-- Mobile Touch UI Buttons -->
+    <div class="controls-container">
+        <div class="btn-group">
+            <div class="btn" id="btnLeft">◀</div>
+            <div class="btn" id="btnRight">▶</div>
+        </div>
+        <div class="btn-group">
+            <div class="btn" id="btnBrake">S</div>
+            <div class="btn" id="btnGas">W</div>
+        </div>
     </div>
-    <div id="speedometer"><span id="speedValue">0</span> KM/H</div>
-    
-    <div id="canvas-container"></div>
+
+    <canvas id="gtaCanvas"></canvas>
 
     <script>
-        // 1. ENGINE SETUP (Scene, Camera, Renderer)
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color('#030308');
-        scene.fog = new THREE.FogExp2('#030308', 0.015); // GTA style atmospheric fog
+        const canvas = document.getElementById('gtaCanvas');
+        const ctx = canvas.getContext('2d');
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
-
-        // 2. LIGHTING SYSTEM
-        const ambientLight = new THREE.AmbientLight('#ffffff', 0.4);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight('#ffffff', 0.8);
-        dirLight.position.set(100, 200, 50);
-        scene.add(dirLight);
-
-        // Cyberpunk neon street lights
-        const neonLight = new THREE.PointLight('#00ffff', 2, 100);
-        neonLight.position.set(0, 20, 0);
-        scene.add(neonLight);
-
-        // 3. ENVIRONMENT GENERATION (The City Grid)
-        // Asphalt Road Ground
-        const floorGeo = new THREE.PlaneGeometry(2000, 2000);
-        const floorMat = new THREE.MeshStandardMaterial({ color: '#101015', roughness: 0.8 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-
-        // Random 3D Buildings Generator
-        const buildings = [];
-        const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
-        
-        for (let i = 0; i < 200; i++) {
-            // Neon glass building colors
-            const hue = Math.random() > 0.5 ? '#00ffff' : '#ff0055';
-            const buildingMat = new THREE.MeshStandardMaterial({
-                color: '#151525',
-                roughness: 0.2,
-                metalness: 0.5,
-                emissive: new THREE.Color(hue),
-                emissiveIntensity: Math.random() * 0.15 // Glowing windows look
-            });
-
-            const building = new THREE.Mesh(buildingGeo, buildingMat);
-            
-            // Random scales for skyscrapers
-            const w = Math.random() * 30 + 15;
-            const h = Math.random() * 120 + 30;
-            const d = Math.random() * 30 + 15;
-            building.scale.set(w, h, d);
-
-            // Spread across the grid but leave roads empty
-            let bx = (Math.random() - 0.5) * 800;
-            let bz = (Math.random() - 0.5) * 800;
-            
-            // Grid locking for straight streets
-            bx = Math.round(bx / 60) * 60 + 25;
-            bz = Math.round(bz / 60) * 60 + 25;
-
-            building.position.set(bx, h / 2, bz);
-            scene.add(building);
-            buildings.push(building);
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
+        resize();
+        window.addEventListener('resize', resize);
 
-        // 4. PLAYER VEHICLE OBJECT (3D Cyber Sports Car)
-        const carGroup = new THREE.Group();
-        
-        // Car Main Chassis
-        const bodyGeo = new THREE.BoxGeometry(6, 1.5, 12);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: '#00ffcc', metalness: 0.8, roughness: 0.1 });
-        const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-        carBody.position.y = 1;
-        carGroup.add(carBody);
+        // Player Sports Car Object
+        const car = {
+            worldX: 500,
+            worldY: 500,
+            w: 18,
+            h: 36,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 6,
+            acc: 0.15,
+            friction: 0.95,
+            turnSpeed: 0.04
+        };
 
-        // Car Cabin Glass
-        const cabinGeo = new THREE.BoxGeometry(4.5, 1.2, 5);
-        const cabinMat = new THREE.MeshStandardMaterial({ color: '#111111', roughness: 0 });
-        const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-        cabin.position.set(0, 2, -1);
-        carGroup.add(cabin);
+        // Input States (Keyboard + Mobile Touch combo)
+        const input = { forward: false, backward: false, left: false, right: false };
 
-        // Headlights (Glowing neon)
-        const lightGeo = new THREE.BoxGeometry(1, 0.3, 0.2);
-        const lightMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-        const leftLight = new THREE.Mesh(lightGeo, lightMat);
-        leftLight.position.set(2, 0.8, 6);
-        const rightLight = leftLight.clone();
-        rightLight.position.x = -2;
-        carGroup.add(leftLight, rightLight);
-
-        carGroup.position.set(0, 0, 0);
-        scene.add(carGroup);
-
-        // 5. VEHICLE PHYSICS CONTROL VARIABLES
-        const keys = { w: false, s: false, a: false, d: false, space: false };
-        let speed = 0;
-        const maxSpeed = 3.5;
-        const acceleration = 0.05;
-        const friction = 0.96;
-        let carAngle = 0;
-        const turnSpeed = 0.035;
-
-        // Key Listeners
-        window.addEventListener('keydown', (e) => handleKey(e, true));
-        window.addEventListener('keyup', (e) => handleKey(e, false));
-
-        function handleKey(e, value) {
-            const key = e.key.toLowerCase();
-            if (key === 'w' || e.key === 'ArrowUp') keys.w = value;
-            if (key === 's' || e.key === 'ArrowDown') keys.s = value;
-            if (key === 'a' || e.key === 'ArrowLeft') keys.a = value;
-            if (key === 'd' || e.key === 'ArrowRight') keys.d = value;
-            if (e.key === ' ') keys.space = value;
-        }
-
-        // Window resize adapter
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // Keyboard triggers
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'w' || e.key === 'ArrowUp') input.forward = true;
+            if (e.key === 's' || e.key === 'ArrowDown') input.backward = true;
+            if (e.key === 'a' || e.key === 'ArrowLeft') input.left = true;
+            if (e.key === 'd' || e.key === 'ArrowRight') input.right = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'w' || e.key === 'ArrowUp') input.forward = false;
+            if (e.key === 's' || e.key === 'ArrowDown') input.backward = false;
+            if (e.key === 'a' || e.key === 'ArrowLeft') input.left = false;
+            if (e.key === 'd' || e.key === 'ArrowRight') input.right = false;
         });
 
-        // 6. MAIN GAME ENGINE LOOP
-        function animate() {
-            requestAnimationFrame(animate);
+        // Mobile Touch triggers setup
+        const setupTouch = (id, property) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
+            el.addEventListener('touchend', () => input[property] = false);
+        };
+        setupTouch('btnGas', 'forward');
+        setupTouch('btnBrake', 'backward');
+        setupTouch('btnLeft', 'left');
+        setupTouch('btnRight', 'right');
 
-            // Car Physics Math Engine
-            if (keys.w) {
-                if (speed < maxSpeed) speed += acceleration;
-            } else if (keys.s) {
-                if (speed > -maxSpeed/2) speed -= acceleration;
-            } else {
-                speed *= friction; // Natural braking friction
+        // Create Procedural GTA City Grid (Roads & Building blocks)
+        const worldSize = 2000;
+        const blocks = [];
+        const blockSize = 160;
+        const roadWidth = 80;
+
+        for (let x = 100; x < worldSize; x += blockSize + roadWidth) {
+            for (let y = 100; y < worldSize; y += blockSize + roadWidth) {
+                blocks.push({
+                    x: x,
+                    y: y,
+                    w: blockSize,
+                    h: blockSize,
+                    color: Math.random() > 0.5 ? '#1a1a24' : '#222230',
+                    height3D: Math.random() * 60 + 40 // Fake 3D projection height factor
+                });
             }
-
-            // Handbrake mechanic
-            if (keys.space) speed *= 0.85;
-
-            // Turning mechanics only possible when car is moving
-            if (Math.abs(speed) > 0.1) {
-                const directionMultiplier = speed > 0 ? 1 : -1;
-                if (keys.a) carAngle += turnSpeed * directionMultiplier;
-                if (keys.d) carAngle -= turnSpeed * directionMultiplier;
-            }
-
-            // Apply Vector rotation formulas to advance position in 3D coordinate system
-            carGroup.position.x += Math.sin(carAngle) * speed;
-            carGroup.position.z += Math.cos(carAngle) * speed;
-            carGroup.rotation.y = carAngle;
-
-            // UI Speedometer refresh
-            document.getElementById('speedValue').innerText = Math.round(Math.abs(speed) * 50);
-
-            // 7. GTA CAMERA ENGINE (Smooth Lerp Third-Person Follow Rig)
-            const targetCamX = carGroup.position.x - Math.sin(carAngle) * 35;
-            const targetCamZ = carGroup.position.z - Math.cos(carAngle) * 35;
-            const targetCamY = carGroup.position.y + 12; // Height elevation over vehicle
-
-            // Linear Interpolation (Lerp) for smooth cinematic lag behind physics chassis
-            camera.position.x += (targetCamX - camera.position.x) * 0.08;
-            camera.position.z += (targetCamZ - camera.position.z) * 0.08;
-            camera.position.y += (targetCamY - camera.position.y) * 0.08;
-            
-            // Lock camera optics vector to face the exact position of the car mesh
-            camera.lookAt(carGroup.position.x, carGroup.position.y + 2, carGroup.position.z);
-
-            renderer.render(scene, camera);
         }
 
-        // Start 3D Engine Runtime
-        animate();
+        function update() {
+            // Acceleration Engine
+            if (input.forward) {
+                if (car.speed < car.maxSpeed) car.speed += car.acc;
+            } else if (input.backward) {
+                if (car.speed > -car.maxSpeed / 2) car.speed -= car.acc;
+            } else {
+                car.speed *= car.friction;
+            }
+
+            // Turning physics mechanics
+            if (Math.abs(car.speed) > 0.2) {
+                const dir = car.speed > 0 ? 1 : -1;
+                if (input.left) car.angle -= car.turnSpeed * dir;
+                if (input.right) car.angle += car.turnSpeed * dir;
+            }
+
+            // Vector math position mapping
+            car.worldX += Math.sin(car.angle) * car.speed;
+            car.worldY -= Math.cos(car.angle) * car.speed;
+
+            // Map boundary constraints
+            if (car.worldX < 0) car.worldX = 0;
+            if (car.worldY < 0) car.worldY = 0;
+            if (car.worldX > worldSize) car.worldX = worldSize;
+            if (car.worldY > worldSize) car.worldY = worldSize;
+
+            document.getElementById('speed').innerText = Math.round(Math.abs(car.speed) * 20);
+        }
+
+        function draw() {
+            // Draw Asphalt Dark Ground Base
+            ctx.fillStyle = '#111116';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // GTA Style Camera Follow matrix
+            const camX = canvas.width / 2 - car.worldX;
+            const camY = canvas.height / 2 - car.worldY;
+
+            // 1. Draw Road markings (Lines)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < worldSize; i += 40) {
+                ctx.strokeRect(camX, camY, worldSize, worldSize);
+            }
+
+            // 2. Draw City Blocks with Pseudo 3D Wall projections
+            blocks.forEach(b => {
+                const screenX = b.x + camX;
+                const screenY = b.y + camY;
+
+                // Render building roof base
+                ctx.fillStyle = b.color;
+                ctx.fillRect(screenX, screenY, b.w, b.h);
+
+                // Fake 3D Effect: Camera distance vector ke hisab se building shadow drop karna
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+                const dx = (screenX + b.w/2) - canvas.width/2;
+                const dy = (screenY + b.h/2) - canvas.height/2;
+                
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(screenX + dx * 0.1, screenY + dy * 0.1);
+                ctx.lineTo(screenX + b.w + dx * 0.1, screenY + dy * 0.1);
+                ctx.lineTo(screenX + b.w, screenY);
+                ctx.fill();
+            });
+
+            // 3. Draw Player Sports Car (Rotated context)
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(car.angle);
+
+            // Car Body Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(-car.w/2 + 4, -car.h/2 + 4, car.w, car.h);
+
+            // Car Chassis
+            ctx.fillStyle = '#ff0055'; // Hot Neon Pink Car
+            ctx.fillRect(-car.w/2, -car.h/2, car.w, car.h);
+
+            // Windshield glass window
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-car.w/2 + 2, -car.h/4, car.w - 4, 6);
+            
+            // Headlights
+            ctx.fillStyle = '#ffff00';
+            ctx.fillRect(-car.w/2 + 2, -car.h/2, 3, 2);
+            ctx.fillRect(car.w/2 - 5, -car.h/2, 3, 2);
+
+            ctx.restore();
+        }
+
+        function engineLoop() {
+            update();
+            draw();
+            requestAnimationFrame(engineLoop);
+        }
+
+        // Run Local Code Template Engine
+        engineLoop();
     </script>
 </body>
 </html>
