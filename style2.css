@@ -1,4 +1,23 @@
-div{
+p{
   height: 50px;
-  weight:500px ;
+  background-color: #C319A8;
+  width: 360px;
+}
+#one{
+  height: 60px;
+  background-color:#C319A8;
+}
+h1 {
+  background: #802828;
+  width: 500px;
+  height: 100px;
+  text-align: center;
+}
+h2{
+  background: pink;
+  height :60px;
+  width: 150px;
+  border: 2px solid greenyellow ;
+  text-align: center;
+
 }
