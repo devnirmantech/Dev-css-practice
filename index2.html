@@ -3,184 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monster Eye Tracking 👁️👾</title>
+    <title>Reptile Interactive Cursor</title>
     <style>
-        /* Reset margins */
+        /* CSS CODE HERE */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Clean center layout for monster */
         body {
-            background-color: #1a1a2e; /* Dark purple/blue background */
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+            background-color: #0b0b0b;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100vw;
+            height: 100vh;
         }
 
-        h1 {
-            color: #e94560;
-            margin-bottom: 30px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
-            text-align: center;
-            padding: 0 10px;
-        }
-
-        /* Monster Face Container */
-        .monster {
-            width: 260px;
-            height: 260px;
-            background-color: #833ab4; /* Cute Purple Monster Body */
-            border-radius: 60px 60px 30px 30px;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 -15px 0 rgba(0,0,0,0.15);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Monster Horns (Seeng) */
-        .monster::before, .monster::after {
-            content: '';
+        canvas {
+            display: block;
             position: absolute;
-            width: 40px;
-            height: 60px;
-            background-color: #e94560;
-            top: -30px;
-            border-radius: 50% 50% 0 0;
-            z-index: -1;
-        }
-        .monster::before { left: 40px; transform: rotate(-20deg); }
-        .monster::after { right: 40px; transform: rotate(20deg); }
-
-        /* Eyes Container */
-        .eyes-container {
-            display: flex;
-            gap: 25px;
-            margin-top: -30px;
-        }
-
-        /* White Part of Eye */
-        .eye {
-            width: 75px;
-            height: 75px;
-            background-color: white;
-            border-radius: 50%;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 8px 0 rgba(0,0,0,0.1);
-        }
-
-        /* Pupils (Kala Chashma/Putli jo ghoomegi) */
-        .pupil {
-            width: 32px;
-            height: 32px;
-            background-color: #0f3460; /* Dark blue pupil */
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* Start at perfect center */
-            transition: 0.05s ease-out; /* Smooth tracking response */
-        }
-
-        /* White shine inside pupil to make it look alive */
-        .pupil::before {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: white;
-            border-radius: 50%;
-            top: 5px;
-            left: 5px;
-        }
-
-        /* Cute Monster Mouth */
-        .mouth {
-            width: 90px;
-            height: 40px;
-            background-color: #0f3460;
-            position: absolute;
-            bottom: 45px;
-            border-radius: 10px 10px 50px 50px;
-            overflow: hidden;
-            box-shadow: inset 0 5px 0 rgba(0,0,0,0.2);
-        }
-
-        /* Monster Tooth (Daant) */
-        .mouth::before {
-            content: '';
-            position: absolute;
-            width: 25px;
-            height: 15px;
-            background-color: white;
             top: 0;
-            left: 20px;
-            border-radius: 0 0 5px 5px;
+            left: 0;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
+    <canvas id="canvas"></canvas>
 
-    <h1>FEED THE MONSTER WITH YOUR CURSOR! 👾</h1>
-
-    <!-- The Monster Face -->
-    <div class="monster">
-        <div class="eyes-container">
-            <div class="eye">
-                <div class="pupil"></div>
-            </div>
-            <div class="eye">
-                <div class="pupil"></div>
-            </div>
-        </div>
-        <div class="mouth"></div>
-    </div>
-
-    <!-- JavaScript to calculate trigonometry math for eye rotation -->
     <script>
-        const pupils = document.querySelectorAll('.pupil');
+        // JAVASCRIPT CODE HERE
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-        function moveEyes(e) {
-            // Get mouse/touch position
-            let mouseX = e.clientX || (e.touches && e.touches[0].clientX);
-            let mouseY = e.clientY || (e.touches && e.touches[0].clientY);
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-            if (!mouseX || !mouseY) return;
+        // Mouse tracking object
+        var Input = {
+            keys: [],
+            mouse: {
+                left: false,
+                right: false,
+                middle: false,
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
+            }
+        };
 
-            pupils.forEach(pupil => {
-                // Get the exact center point of each eye
-                const eyeRect = pupil.parentElement.getBoundingClientRect();
-                const eyeCenterX = eyeRect.left + eyeRect.width / 2;
-                const eyeCenterY = eyeRect.top + eyeRect.height / 2;
+        // Mouse events
+        document.addEventListener("mousedown", function(event) {
+            if (event.button === 0) { Input.mouse.left = true; }
+            if (event.button === 1) { Input.mouse.middle = true; }
+            if (event.button === 2) { Input.mouse.right = true; }
+        });
 
-                // Angle calculate karne ka standard Trigonometry logic (Math.atan2)
-                const angle = Math.atan2(mouseY - eyeCenterY, mouseX - eyeCenterX);
-                
-                // Eyeball kitna door tak ghum sakta hai (Max distance in pixels)
-                const maxDistance = 18; 
+        document.addEventListener("mouseup", function(event) {
+            if (event.button === 0) { Input.mouse.left = false; }
+            if (event.button === 1) { Input.mouse.middle = false; }
+            if (event.button === 2) { Input.mouse.right = false; }
+        });
 
-                // X and Y offset calculations
-                const pupilX = Math.cos(angle) * maxDistance;
-                const pupilY = Math.sin(angle) * maxDistance;
+        document.addEventListener('mousemove', function(event) {
+            Input.mouse.x = event.clientX;
+            Input.mouse.y = event.clientY;
+        });
 
-                // Apply dynamic styles to move the pupils
-                pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
-            });
+        // Reptile Structure
+        class Segment {
+            constructor(x, y, size, angle = 0) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.angle = angle;
+            }
         }
 
-        // Listen for both desktop mouse and mobile touch actions
-        window.addEventListener('mousemove', moveEyes);
-        window.addEventListener('touchmove', moveEyes);
+        const segmentsCount = 35;
+        const segmentLength = 12;
+        const segments = [];
+
+        for (let i = 0; i < segmentsCount; i++) {
+            segments.push(new Segment(Input.mouse.x, Input.mouse.y, Math.max(2, 18 - i * 0.4)));
+        }
+
+        // Animation Loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            let head = segments[0];
+            let dx = Input.mouse.x - head.x;
+            let dy = Input.mouse.y - head.y;
+            head.angle = Math.atan2(dy, dx);
+            head.x += dx * 0.15;
+            head.y += dy * 0.15;
+            
+            for (let i = 1; i < segmentsCount; i++) {
+                let prev = segments[i - 1];
+                let curr = segments[i];
+                
+                let targetX = prev.x - Math.cos(prev.angle) * segmentLength;
+                let targetY = prev.y - Math.sin(prev.angle) * segmentLength;
+                
+                curr.x += (targetX - curr.x) * 0.4;
+                curr.y += (targetY - curr.y) * 0.4;
+                curr.angle = Math.atan2(prev.y - curr.y, prev.x - curr.x);
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 1.5;
+            
+            for (let i = 0; i < segmentsCount; i++) {
+                let curr = segments[i];
+                
+                ctx.beginPath();
+                ctx.arc(curr.x, curr.y, curr.size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                if (i > 2 && i < segmentsCount - 5) {
+                    let width = curr.size * 1.5;
+                    let orthoAngle = curr.angle + Math.PI / 2;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(curr.x, curr.y);
+                    ctx.lineTo(curr.x + Math.cos(orthoAngle) * width, curr.y + Math.sin(orthoAngle) * width);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(curr.x, curr.y);
+                    ctx.lineTo(curr.x - Math.cos(orthoAngle) * width, curr.y - Math.sin(orthoAngle) * width);
+                    ctx.stroke();
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        animate();
     </script>
 </body>
 </html>
