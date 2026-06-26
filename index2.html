@@ -3,197 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Space Shooter Game</title>
+    <title>3D GTA Style Mini City Prototype</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background-color: #050510;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Courier New', Courier, monospace;
+        body { background-color: #05050a; overflow: hidden; width: 100vw; height: 100vh; font-family: 'Segoe UI', sans-serif; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ffff;
+            background: rgba(10, 10, 25, 0.85);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #00ffff;
+            font-size: 14px;
+            pointer-events: none;
+            line-height: 1.6;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
         }
-        canvas {
-            background-color: #020205;
-            display: block;
-            border: 2px solid #390099;
-            box-shadow: 0 0 20px #390099;
-            will-change: transform;
+        #speedometer {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            color: #ff0055;
+            font-size: 24px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            border-left: 5px solid #ff0055;
         }
     </style>
+    <!-- Three.js CDN link for rendering hardcore 3D Graphics -->
+    <script src="https://cloudflare.com"></script>
 </head>
 <body>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="instructions">
+        <strong>GTA 5 MINIMUM 3D CITY PROTOTYPE</strong><br>
+        • Drive: <b>W, A, S, D</b> or <b>Arrow Keys</b><br>
+        • Handbrake: <b>Spacebar</b><br>
+        • Camera: Follows behind the car automatically
+    </div>
+    <div id="speedometer"><span id="speedValue">0</span> KM/H</div>
+    
+    <div id="canvas-container"></div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        // 1. ENGINE SETUP (Scene, Camera, Renderer)
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#030308');
+        scene.fog = new THREE.FogExp2('#030308', 0.015); // GTA style atmospheric fog
 
-        // Fixed game board resolution
-        canvas.width = 480;
-        canvas.height = 640;
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
 
-        // Game states
-        let score = 0;
-        let lives = 3;
-        let gameOver = false;
-        let enemies = [];
-        let bullets = [];
+        // 2. LIGHTING SYSTEM
+        const ambientLight = new THREE.AmbientLight('#ffffff', 0.4);
+        scene.add(ambientLight);
 
-        // Player SpaceShip Object
-        const player = {
-            x: canvas.width / 2 - 20,
-            y: canvas.height - 60,
-            w: 40,
-            h: 30,
-            color: '#00ffff'
-        };
+        const dirLight = new THREE.DirectionalLight('#ffffff', 0.8);
+        dirLight.position.set(100, 200, 50);
+        scene.add(dirLight);
 
-        // Mouse tracking for controls
-        window.addEventListener('mousemove', (e) => {
-            if (gameOver) return;
-            // Canvas ki absolute position screen par nikalna
-            const rect = canvas.getBoundingClientRect();
-            // Spaceship ko center align karke canvas boundary ke andar rakhna
-            player.x = (e.clientX - rect.left) - player.w / 2;
-            if (player.x < 0) player.x = 0;
-            if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
-        });
+        // Cyberpunk neon street lights
+        const neonLight = new THREE.PointLight('#00ffff', 2, 100);
+        neonLight.position.set(0, 20, 0);
+        scene.add(neonLight);
 
-        // Click to shoot
-        window.addEventListener('click', () => {
-            if (gameOver) {
-                resetGame();
-                return;
-            }
-            // Bullet launch points (Center of the ship)
-            bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 4, h: 10, speed: 7 });
-        });
+        // 3. ENVIRONMENT GENERATION (The City Grid)
+        // Asphalt Road Ground
+        const floorGeo = new THREE.PlaneGeometry(2000, 2000);
+        const floorMat = new THREE.MeshStandardMaterial({ color: '#101015', roughness: 0.8 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
-        // Enemy spawning logic
-        function spawnEnemy() {
-            if (gameOver) return;
-            const size = Math.random() * 20 + 20; // Varied alien sizes
-            enemies.push({
-                x: Math.random() * (canvas.width - size),
-                y: -size,
-                w: size,
-                h: size,
-                speed: Math.random() * 1.5 + 1,
-                color: `hsl(${Math.random() * 60 + 340}, 100%, 60%)` // Red/Pink tones
+        // Random 3D Buildings Generator
+        const buildings = [];
+        const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
+        
+        for (let i = 0; i < 200; i++) {
+            // Neon glass building colors
+            const hue = Math.random() > 0.5 ? '#00ffff' : '#ff0055';
+            const buildingMat = new THREE.MeshStandardMaterial({
+                color: '#151525',
+                roughness: 0.2,
+                metalness: 0.5,
+                emissive: new THREE.Color(hue),
+                emissiveIntensity: Math.random() * 0.15 // Glowing windows look
             });
+
+            const building = new THREE.Mesh(buildingGeo, buildingMat);
+            
+            // Random scales for skyscrapers
+            const w = Math.random() * 30 + 15;
+            const h = Math.random() * 120 + 30;
+            const d = Math.random() * 30 + 15;
+            building.scale.set(w, h, d);
+
+            // Spread across the grid but leave roads empty
+            let bx = (Math.random() - 0.5) * 800;
+            let bz = (Math.random() - 0.5) * 800;
+            
+            // Grid locking for straight streets
+            bx = Math.round(bx / 60) * 60 + 25;
+            bz = Math.round(bz / 60) * 60 + 25;
+
+            building.position.set(bx, h / 2, bz);
+            scene.add(building);
+            buildings.push(building);
         }
-        setInterval(spawnEnemy, 1000); // Har 1 second me naya alien aayega
 
-        // Collision Detector Function (Hit Box Calculation)
-        function checkCollision(rect1, rect2) {
-            return rect1.x < rect2.x + rect2.w &&
-                   rect1.x + rect1.w > rect2.x &&
-                   rect1.y < rect2.y + rect2.h &&
-                   rect1.y + rect1.h > rect2.y;
+        // 4. PLAYER VEHICLE OBJECT (3D Cyber Sports Car)
+        const carGroup = new THREE.Group();
+        
+        // Car Main Chassis
+        const bodyGeo = new THREE.BoxGeometry(6, 1.5, 12);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: '#00ffcc', metalness: 0.8, roughness: 0.1 });
+        const carBody = new THREE.Mesh(bodyGeo, bodyMat);
+        carBody.position.y = 1;
+        carGroup.add(carBody);
+
+        // Car Cabin Glass
+        const cabinGeo = new THREE.BoxGeometry(4.5, 1.2, 5);
+        const cabinMat = new THREE.MeshStandardMaterial({ color: '#111111', roughness: 0 });
+        const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+        cabin.position.set(0, 2, -1);
+        carGroup.add(cabin);
+
+        // Headlights (Glowing neon)
+        const lightGeo = new THREE.BoxGeometry(1, 0.3, 0.2);
+        const lightMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+        const leftLight = new THREE.Mesh(lightGeo, lightMat);
+        leftLight.position.set(2, 0.8, 6);
+        const rightLight = leftLight.clone();
+        rightLight.position.x = -2;
+        carGroup.add(leftLight, rightLight);
+
+        carGroup.position.set(0, 0, 0);
+        scene.add(carGroup);
+
+        // 5. VEHICLE PHYSICS CONTROL VARIABLES
+        const keys = { w: false, s: false, a: false, d: false, space: false };
+        let speed = 0;
+        const maxSpeed = 3.5;
+        const acceleration = 0.05;
+        const friction = 0.96;
+        let carAngle = 0;
+        const turnSpeed = 0.035;
+
+        // Key Listeners
+        window.addEventListener('keydown', (e) => handleKey(e, true));
+        window.addEventListener('keyup', (e) => handleKey(e, false));
+
+        function handleKey(e, value) {
+            const key = e.key.toLowerCase();
+            if (key === 'w' || e.key === 'ArrowUp') keys.w = value;
+            if (key === 's' || e.key === 'ArrowDown') keys.s = value;
+            if (key === 'a' || e.key === 'ArrowLeft') keys.a = value;
+            if (key === 'd' || e.key === 'ArrowRight') keys.d = value;
+            if (e.key === ' ') keys.space = value;
         }
 
-        // Restart logic
-        function resetGame() {
-            score = 0;
-            lives = 3;
-            enemies = [];
-            bullets = [];
-            gameOver = false;
-        }
+        // Window resize adapter
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-        // Main Loop Engine
-        function gameLoop() {
-            // Screen clear
-            ctx.fillStyle = '#020205';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 6. MAIN GAME ENGINE LOOP
+        function animate() {
+            requestAnimationFrame(animate);
 
-            if (!gameOver) {
-                // 1. Move and Draw Bullets
-                for (let b = bullets.length - 1; b >= 0; b--) {
-                    bullets[b].y -= bullets[b].speed;
-                    ctx.fillStyle = '#ffff00';
-                    ctx.fillRect(bullets[b].x, bullets[b].y, bullets[b].w, bullets[b].h);
-                    
-                    // Out of screen bullets delete karna
-                    if (bullets[b].y < 0) bullets.splice(b, 1);
-                }
-
-                // 2. Move and Draw Enemies
-                for (let e = enemies.length - 1; e >= 0; e--) {
-                    enemies[e].y += enemies[e].speed;
-                    ctx.fillStyle = enemies[e].color;
-                    ctx.fillRect(enemies[e].x, enemies[e].y, enemies[e].w, enemies[e].h);
-
-                    // Check bullet hit enemy
-                    for (let b = bullets.length - 1; b >= 0; b--) {
-                        if (checkCollision(bullets[b], enemies[e])) {
-                            enemies.splice(e, 1);
-                            bullets.splice(b, 1);
-                            score += 10;
-                            break;
-                        }
-                    }
-
-                    if (!enemies[e]) continue;
-
-                    // Check enemy hit player
-                    if (checkCollision(enemies[e], player)) {
-                        enemies.splice(e, 1);
-                        lives--;
-                        if (lives <= 0) gameOver = true;
-                        continue;
-                    }
-
-                    // Bottom reach condition
-                    if (enemies[e].y > canvas.height) {
-                        enemies.splice(e, 1);
-                        lives--;
-                        if (lives <= 0) gameOver = true;
-                    }
-                }
-
-                // 3. Draw Player Spaceship
-                ctx.fillStyle = player.color;
-                ctx.beginPath();
-                ctx.moveTo(player.x + player.w / 2, player.y);
-                ctx.lineTo(player.x, player.y + player.h);
-                ctx.lineTo(player.x + player.w, player.y + player.h);
-                ctx.closePath();
-                ctx.fill();
-
-                // 4. Draw HUD Dashboard (Score & Lives)
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '16px Courier New';
-                ctx.fillText(`SCORE: ${score}`, 20, 30);
-                ctx.fillText(`LIVES: ${'❤️'.repeat(lives)}`, canvas.width - 140, 30);
-
+            // Car Physics Math Engine
+            if (keys.w) {
+                if (speed < maxSpeed) speed += acceleration;
+            } else if (keys.s) {
+                if (speed > -maxSpeed/2) speed -= acceleration;
             } else {
-                // Game Over Screen Template
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = '#ff0055';
-                ctx.font = '30px Courier New';
-                ctx.textAlign = 'center';
-                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '16px Courier New';
-                ctx.fillText(`FINAL SCORE: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
-                ctx.fillText("CLICK ANYWHERE TO RESTART", canvas.width / 2, canvas.height / 2 + 60);
-                ctx.textAlign = 'start'; // Reset alignment
+                speed *= friction; // Natural braking friction
             }
 
-            requestAnimationFrame(gameLoop);
+            // Handbrake mechanic
+            if (keys.space) speed *= 0.85;
+
+            // Turning mechanics only possible when car is moving
+            if (Math.abs(speed) > 0.1) {
+                const directionMultiplier = speed > 0 ? 1 : -1;
+                if (keys.a) carAngle += turnSpeed * directionMultiplier;
+                if (keys.d) carAngle -= turnSpeed * directionMultiplier;
+            }
+
+            // Apply Vector rotation formulas to advance position in 3D coordinate system
+            carGroup.position.x += Math.sin(carAngle) * speed;
+            carGroup.position.z += Math.cos(carAngle) * speed;
+            carGroup.rotation.y = carAngle;
+
+            // UI Speedometer refresh
+            document.getElementById('speedValue').innerText = Math.round(Math.abs(speed) * 50);
+
+            // 7. GTA CAMERA ENGINE (Smooth Lerp Third-Person Follow Rig)
+            const targetCamX = carGroup.position.x - Math.sin(carAngle) * 35;
+            const targetCamZ = carGroup.position.z - Math.cos(carAngle) * 35;
+            const targetCamY = carGroup.position.y + 12; // Height elevation over vehicle
+
+            // Linear Interpolation (Lerp) for smooth cinematic lag behind physics chassis
+            camera.position.x += (targetCamX - camera.position.x) * 0.08;
+            camera.position.z += (targetCamZ - camera.position.z) * 0.08;
+            camera.position.y += (targetCamY - camera.position.y) * 0.08;
+            
+            // Lock camera optics vector to face the exact position of the car mesh
+            camera.lookAt(carGroup.position.x, carGroup.position.y + 2, carGroup.position.z);
+
+            renderer.render(scene, camera);
         }
 
-        // Start
-        gameLoop();
+        // Start 3D Engine Runtime
+        animate();
     </script>
 </body>
 </html>
