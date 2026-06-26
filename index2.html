@@ -1,23 +1,21 @@
-
- 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>For Bhaiya 🚀</title>
+    <title>Galaxy Command Center 🌌</title>
     <style>
         /* Reset default browser gaps */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Courier New', Courier, monospace; /* Ekdum hacker/scientific font */
         }
 
         /* Space background */
         body {
-            background: radial-gradient(circle at center, #0c102b, #030511);
+            background: radial-gradient(circle at center, #020514, #000105);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -33,12 +31,12 @@
             width: 200%;
             height: 200%;
             background-image: 
-                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
-                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px);
-            background-size: 550px 550px, 350px 350px;
-            background-position: 0 0, 40px 60px;
-            animation: spaceMove 60s linear infinite;
-            opacity: 0.5;
+                radial-gradient(white, rgba(255,255,255,.3) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.2) 1px, transparent 30px);
+            background-size: 400px 400px, 250px 250px;
+            background-position: 0 0, 30px 40px;
+            animation: spaceMove 30s linear infinite;
+            opacity: 0.6;
             z-index: 1;
         }
 
@@ -52,24 +50,26 @@
             text-align: center;
             color: white;
             z-index: 10;
-            pointer-events: none; /* Text cursor ko block nahi karega */
+            pointer-events: none;
+            padding: 20px;
         }
 
         .content h1 {
-            font-size: 3rem;
+            font-size: 3.2rem;
             font-weight: 900;
-            letter-spacing: 3px;
-            text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
-            background: linear-gradient(45deg, #00f2fe, #4facfe, #ff0844);
+            letter-spacing: 5px;
+            text-shadow: 0 0 25px rgba(0, 255, 153, 0.7); /* Green glowing neon text */
+            background: linear-gradient(45deg, #00ff99, #00f2fe, #4facfe);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .content p {
             font-size: 1.1rem;
-            color: #8a8a9e;
-            letter-spacing: 1px;
+            color: #00ff99; /* Futuristic green text */
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(0, 255, 153, 0.5);
         }
 
         /* The Moving Rocket Element */
@@ -77,7 +77,7 @@
             position: fixed;
             width: 50px;
             height: 50px;
-            font-size: 40px;
+            font-size: 42px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -85,7 +85,7 @@
             z-index: 9999;
             transform: translate(-50%, -50%) rotate(45deg);
             transition: transform 0.1s ease-out;
-            filter: drop-shadow(0 0 10px #ff0844);
+            filter: drop-shadow(0 0 15px #00ff99); /* Rocket glow colors matched */
         }
 
         /* Smoke/Fire Effect trail */
@@ -93,12 +93,12 @@
             position: fixed;
             width: 8px;
             height: 8px;
-            background: linear-gradient(#ff0844, #ffb108);
+            background: linear-gradient(#00ff99, #00f2fe);
             border-radius: 50%;
             pointer-events: none;
             z-index: 9998;
-            box-shadow: 0 0 10px #ff0844;
-            animation: fadeSmoke 0.6s linear forwards;
+            box-shadow: 0 0 12px #00ff99;
+            animation: fadeSmoke 0.5s linear forwards;
         }
 
         @keyframes fadeSmoke {
@@ -109,16 +109,16 @@
 </head>
 <body>
 
-    <!-- Main Heading for Bhaiya -->
+    <!-- Fresh Futuristic Command Text -->
     <div class="content">
-        <h1>YOU ARE OUT OF THIS WORLD, BHAIYA!</h1>
-        <p>Touch anywhere on the screen to launch the rocket 🚀</p>
+        <h1>GALAXY COMMAND: ACTIVE</h1>
+        <p>[ System online. Deep space scanning in progress... 🛰️ ]</p>
     </div>
 
     <!-- Rocket Emoji Element -->
     <div class="rocket-cursor" id="rocket">🚀</div>
 
-    <!-- Small Javascript to make it move on touch/mouse move -->
+    <!-- Javascript for movement -->
     <script>
         const rocket = document.getElementById('rocket');
         let currentX = window.innerWidth / 2;
@@ -140,8 +140,8 @@
 
         // Mouse or Touch Move function
         function moveRocket(e) {
-            let x = e.clientX || (e.touches && e.touches[0].clientX);
-            let y = e.clientY || (e.touches && e.touches[0].clientY);
+            let x = e.clientX || (e.touches && e.touches.clientX);
+            let y = e.clientY || (e.touches && e.touches.clientY);
             
             if (x && y) {
                 targetX = x;
@@ -150,26 +150,22 @@
             }
         }
 
-        // Rocket ke piche fire/smoke tail banane ke liye
+        // Rocket ke piche neon sparks trail
         function createSmoke(x, y) {
             const smoke = document.createElement('div');
             smoke.classList.add('smoke');
-            // Thoda rocket ke piche set karne ke liye calculation
             smoke.style.left = (x - 5) + 'px';
             smoke.style.top = (y + 15) + 'px';
             document.body.appendChild(smoke);
             
             setTimeout(() => {
                 smoke.remove();
-            }, 600);
+            }, 500);
         }
 
-        // Events listeners for both Laptop (Mouse) and Mobile (Touch)
+        // Event listeners
         window.addEventListener('mousemove', moveRocket);
         window.addEventListener('touchmove', moveRocket);
     </script>
 </body>
 </html>
-
-  
-
