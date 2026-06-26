@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High Quality Reptile Interactive Cursor</title>
+    <title>Cyber Neon Scorpion Cursor Matrix</title>
     <style>
         * {
             margin: 0;
@@ -11,29 +11,28 @@
             box-sizing: border-box;
         }
         body {
-            background-color: #050508; /* Ultra dark modern background */
+            background-color: #030308;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
+            cursor: none; /* Default cursor chupane ke liye */
         }
         canvas {
             display: block;
             position: absolute;
             top: 0;
             left: 0;
-            pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="matrixCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('canvas');
+        const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Quality Improvement: Monitor ki resolution ke hisaab se Canvas pixel ratio fix karna (No Blurriness)
-        function resizeCanvas() {
+        function resize() {
             const dpr = window.devicePixelRatio || 1;
             canvas.width = window.innerWidth * dpr;
             canvas.height = window.innerHeight * dpr;
@@ -41,121 +40,154 @@
             canvas.style.height = window.innerHeight + 'px';
             ctx.scale(dpr, dpr);
         }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        resize();
+        window.addEventListener('resize', resize);
 
-        var Input = {
-            keys: [],
-            mouse: {
-                left: false, right: false, middle: false,
-                x: window.innerWidth / 2,
-                y: window.innerHeight / 2
-            }
+        // Mouse tracking
+        const mouse = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            targetX: window.innerWidth / 2,
+            targetY: window.innerHeight / 2,
+            angle: 0
         };
 
-        document.addEventListener("mousedown", (e) => {
-            if (e.button === 0) Input.mouse.left = true;
-            if (e.button === 1) Input.mouse.middle = true;
-            if (e.button === 2) Input.mouse.right = true;
-        });
-        document.addEventListener("mouseup", (e) => {
-            if (e.button === 0) Input.mouse.left = false;
-            if (e.button === 1) Input.mouse.middle = false;
-            if (e.button === 2) Input.mouse.right = false;
-        });
-        document.addEventListener('mousemove', (e) => {
-            Input.mouse.x = e.clientX;
-            Input.mouse.y = e.clientY;
+        window.addEventListener('mousemove', (e) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
         });
 
-        class Segment {
-            constructor(x, y, size, angle = 0) {
-                this.x = x;
-                this.y = y;
-                this.size = size;
-                this.angle = angle;
+        // Inverse Kinematics Chain Class
+        class IKChain {
+            constructor(numSegments, segLength, baseWidth) {
+                this.numSegments = numSegments;
+                this.segLength = segLength;
+                this.baseWidth = baseWidth;
+                this.x = new Array(numSegments).fill(mouse.x);
+                this.y = new Array(numSegments).fill(mouse.y);
+                this.angles = new Array(numSegments).fill(0);
+            }
+
+            update(targetX, targetY) {
+                // Head or lead segment
+                let dx = targetX - this.x[0];
+                let dy = targetY - this.y[0];
+                this.angles[0] = Math.atan2(dy, dx);
+                this.x[0] = targetX - Math.cos(this.angles[0]) * this.segLength;
+                this.y[0] = targetY - Math.sin(this.angles[0]) * this.segLength;
+
+                // Rest of the chain
+                for (let i = 1; i < this.numSegments; i++) {
+                    dx = this.x[i - 1] - this.x[i];
+                    dy = this.y[i - 1] - this.y[i];
+                    this.angles[i] = Math.atan2(dy, dx);
+                    this.x[i] = this.x[i - 1] - Math.cos(this.angles[i]) * this.segLength;
+                    this.y[i] = this.y[i - 1] - Math.sin(this.angles[i]) * this.segLength;
+                }
+            }
+
+            draw(glowColor, isTail = false) {
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = glowColor;
+                ctx.strokeStyle = glowColor;
+                ctx.fillStyle = '#ffffff';
+
+                // Spine/Segment logic
+                for (let i = 0; i < this.numSegments; i++) {
+                    let size = this.baseWidth * (1 - i / this.numSegments);
+                    if (isTail && i === 0) size = this.baseWidth * 1.5; // Shocking Big Stinger Head
+
+                    ctx.beginPath();
+                    ctx.arc(this.x[i], this.y[i], size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Ribs / Lateral spines
+                    if (i > 0 && i < this.numSegments - 2) {
+                        let ortho = this.angles[i] + Math.PI / 2;
+                        let w = size * 2.2;
+                        ctx.beginPath();
+                        ctx.moveTo(this.x[i], this.y[i]);
+                        ctx.lineTo(this.x[i] + Math.cos(ortho) * w, this.y[i] + Math.sin(ortho) * w);
+                        ctx.moveTo(this.x[i], this.y[i]);
+                        ctx.lineTo(this.x[i] - Math.cos(ortho) * w, this.y[i] - Math.sin(ortho) * w);
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
             }
         }
 
-        const segmentsCount = 38; // Tapering improve karne ke liye thode segments badhaye
-        const segmentLength = 10; // Chote segments se animation aur smooth chalti hai
-        const segments = [];
+        // Initialize Scorpion Components
+        const tail = new IKChain(24, 10, 10); // Dangerous Main Stinger Tail
+        const leftPincer = new IKChain(6, 15, 7);
+        const rightPincer = new IKChain(6, 15, 7);
 
-        for (let i = 0; i < segmentsCount; i++) {
-            // Smooth natural tail design ke liye tail size calculate kiya
-            let size = 16 * Math.pow(1 - (i / segmentsCount), 0.6);
-            segments.push(new Segment(Input.mouse.x, Input.mouse.y, Math.max(2, size)));
-        }
+        let time = 0;
 
         function animate() {
-            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            
-            // Head Movement
-            let head = segments[0];
-            let dx = Input.mouse.x - head.x;
-            let dy = Input.mouse.y - head.y;
-            head.angle = Math.atan2(dy, dx);
-            head.x += dx * 0.2; // Extra responsive tracking
-            head.y += dy * 0.2;
-            
-            // Body Follow Logic (Kinematics)
-            for (let i = 1; i < segmentsCount; i++) {
-                let prev = segments[i - 1];
-                let curr = segments[i];
-                
-                let targetX = prev.x - Math.cos(prev.angle) * segmentLength;
-                let targetY = prev.y - Math.sin(prev.angle) * segmentLength;
-                
-                curr.x += (targetX - curr.x) * 0.35;
-                curr.y += (targetY - curr.y) * 0.35;
-                curr.angle = Math.atan2(prev.y - curr.y, prev.x - curr.x);
-            }
-            
-            // Quality Improvement: Glow and Neon shadows add karna
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.lineWidth = 2;
-            
-            // 1. Spine Linkage: Sare segments ko smooth continuous line se jodna
-            ctx.beginPath();
-            ctx.moveTo(segments[0].x, segments[0].y);
-            for(let i = 1; i < segmentsCount; i++){
-                ctx.lineTo(segments[i].x, segments[i].y);
-            }
-            ctx.stroke();
+            // Matrix Fading Effect
+            ctx.fillStyle = 'rgba(3, 3, 8, 0.2)';
+            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+            time += 0.05;
 
-            // 2. Ribs and Joints Drawing
-            for (let i = 0; i < segmentsCount; i++) {
-                let curr = segments[i];
-                
-                // Joints Draw karna
-                ctx.beginPath();
-                ctx.arc(curr.x, curr.y, curr.size / 2, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                
-                // Spine Ribs (Side spikes)
-                if (i > 1 && i < segmentsCount - 6) {
-                    let width = curr.size * 1.6;
-                    let orthoAngle = curr.angle + Math.PI / 2;
-                    
-                    // Left Rib
+            // Smooth Mouse Interpolation
+            mouse.x += (mouse.targetX - mouse.x) * 0.12;
+            mouse.y += (mouse.targetY - mouse.y) * 0.12;
+
+            let dx = mouse.targetX - mouse.x;
+            let dy = mouse.targetY - mouse.y;
+            mouse.angle = Math.atan2(dy, dx);
+
+            // Update Main Tail (Follows Mouse with slight lag)
+            tail.update(mouse.x, mouse.y);
+
+            // Pincers / Front claws Offset logic
+            let pincerAngleSpread = 0.6;
+            let pincerDist = 45;
+            
+            let leftPincerTargetX = mouse.x + Math.cos(mouse.angle - pincerAngleSpread) * pincerDist + Math.sin(time)*5;
+            let leftPincerTargetY = mouse.y + Math.sin(mouse.angle - pincerAngleSpread) * pincerDist;
+            leftPincer.update(leftPincerTargetX, leftPincerTargetY);
+
+            let rightPincerTargetX = mouse.x + Math.cos(mouse.angle + pincerAngleSpread) * pincerDist + Math.sin(time)*5;
+            let rightPincerTargetY = mouse.y + Math.sin(mouse.angle + pincerAngleSpread) * pincerDist;
+            rightPincer.update(rightPincerTargetX, rightPincerTargetY);
+
+            // Render Components with Killer Cyber Green & Cyan Neon Colors
+            tail.draw('#00ffcc', true);
+            leftPincer.draw('#00ff66');
+            rightPincer.draw('#00ff66');
+
+            // Draw Scorpion 8 Cyber Legs dynamically
+            ctx.save();
+            ctx.strokeStyle = '#00ffcc';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00ffcc';
+            ctx.lineWidth = 2;
+
+            // Tail ke middle segments se legs attach honge
+            for (let l = 4; l < 12; l += 2) {
+                if(tail.x[l]) {
+                    let sideAngle = tail.angles[l] + Math.PI/2;
+                    let legLength = 40 + Math.sin(time + l) * 5;
+
+                    // Left Leg
                     ctx.beginPath();
-                    ctx.moveTo(curr.x, curr.y);
-                    ctx.lineTo(curr.x + Math.cos(orthoAngle) * width, curr.y + Math.sin(orthoAngle) * width);
+                    ctx.moveTo(tail.x[l], tail.y[l]);
+                    ctx.lineTo(tail.x[l] + Math.cos(sideAngle)*legLength, tail.y[l] + Math.sin(sideAngle)*legLength);
                     ctx.stroke();
-                    
-                    // Right Rib
+
+                    // Right Leg
                     ctx.beginPath();
-                    ctx.moveTo(curr.x, curr.y);
-                    ctx.lineTo(curr.x - Math.cos(orthoAngle) * width, curr.y - Math.sin(orthoAngle) * width);
+                    ctx.moveTo(tail.x[l], tail.y[l]);
+                    ctx.lineTo(tail.x[l] - Math.cos(sideAngle)*legLength, tail.y[l] - Math.sin(sideAngle)*legLength);
                     ctx.stroke();
                 }
             }
-            
-            // Shadow reset taaki frames heavy na ho aur performance smooth rahe
-            ctx.shadowBlur = 0;
+            ctx.restore();
+
             requestAnimationFrame(animate);
         }
 
