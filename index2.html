@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Neon Scorpion Cursor Matrix</title>
+    <title>High Performance Cyber Scorpion</title>
     <style>
         * {
             margin: 0;
@@ -15,13 +15,16 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
-            cursor: none; /* Default cursor chupane ke liye */
+            cursor: none;
         }
         canvas {
             display: block;
             position: absolute;
             top: 0;
             left: 0;
+            /* Performance Hack: CSS layer hardware acceleration switch on karein */
+            will-change: transform;
+            filter: drop-shadow(0px 0px 8px #00ffcc);
         }
     </style>
 </head>
@@ -33,17 +36,13 @@
         const ctx = canvas.getContext('2d');
 
         function resize() {
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
-            ctx.scale(dpr, dpr);
+            // High-DPI reset lag free calculations ke liye
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
         resize();
         window.addEventListener('resize', resize);
 
-        // Mouse tracking
         const mouse = {
             x: window.innerWidth / 2,
             y: window.innerHeight / 2,
@@ -57,7 +56,6 @@
             mouse.targetY = e.clientY;
         });
 
-        // Inverse Kinematics Chain Class
         class IKChain {
             constructor(numSegments, segLength, baseWidth) {
                 this.numSegments = numSegments;
@@ -69,14 +67,12 @@
             }
 
             update(targetX, targetY) {
-                // Head or lead segment
                 let dx = targetX - this.x[0];
                 let dy = targetY - this.y[0];
                 this.angles[0] = Math.atan2(dy, dx);
                 this.x[0] = targetX - Math.cos(this.angles[0]) * this.segLength;
                 this.y[0] = targetY - Math.sin(this.angles[0]) * this.segLength;
 
-                // Rest of the chain
                 for (let i = 1; i < this.numSegments; i++) {
                     dx = this.x[i - 1] - this.x[i];
                     dy = this.y[i - 1] - this.y[i];
@@ -86,27 +82,30 @@
                 }
             }
 
-            draw(glowColor, isTail = false) {
-                ctx.save();
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = glowColor;
-                ctx.strokeStyle = glowColor;
+            draw(strokeColor, isTail = false) {
+                ctx.strokeStyle = strokeColor;
                 ctx.fillStyle = '#ffffff';
+                ctx.lineWidth = 2;
 
-                // Spine/Segment logic
+                // Continuous fast skeletal rendering
+                ctx.beginPath();
+                ctx.moveTo(this.x[0], this.y[0]);
+                for (let i = 1; i < this.numSegments; i++) {
+                    ctx.lineTo(this.x[i], this.y[i]);
+                }
+                ctx.stroke();
+
                 for (let i = 0; i < this.numSegments; i++) {
                     let size = this.baseWidth * (1 - i / this.numSegments);
-                    if (isTail && i === 0) size = this.baseWidth * 1.5; // Shocking Big Stinger Head
+                    if (isTail && i === 0) size = this.baseWidth * 1.5;
 
                     ctx.beginPath();
-                    ctx.arc(this.x[i], this.y[i], size, 0, Math.PI * 2);
+                    ctx.arc(this.x[i], this.y[i], Math.max(1, size), 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.stroke();
 
-                    // Ribs / Lateral spines
-                    if (i > 0 && i < this.numSegments - 2) {
+                    if (i > 0 && i < this.numSegments - 2 && i % 2 === 0) {
                         let ortho = this.angles[i] + Math.PI / 2;
-                        let w = size * 2.2;
+                        let w = size * 2;
                         ctx.beginPath();
                         ctx.moveTo(this.x[i], this.y[i]);
                         ctx.lineTo(this.x[i] + Math.cos(ortho) * w, this.y[i] + Math.sin(ortho) * w);
@@ -115,78 +114,60 @@
                         ctx.stroke();
                     }
                 }
-                ctx.restore();
             }
         }
 
-        // Initialize Scorpion Components
-        const tail = new IKChain(24, 10, 10); // Dangerous Main Stinger Tail
-        const leftPincer = new IKChain(6, 15, 7);
-        const rightPincer = new IKChain(6, 15, 7);
+        const tail = new IKChain(20, 12, 8); 
+        const leftPincer = new IKChain(5, 14, 5);
+        const rightPincer = new IKChain(5, 14, 5);
 
         let time = 0;
 
         function animate() {
-            // Matrix Fading Effect
-            ctx.fillStyle = 'rgba(3, 3, 8, 0.2)';
-            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-            time += 0.05;
+            // Speed Optimize: Fade ke liye clearRect use kiya taaki cache build na ho
+            ctx.fillStyle = 'rgba(3, 3, 8, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            time += 0.08;
 
-            // Smooth Mouse Interpolation
-            mouse.x += (mouse.targetX - mouse.x) * 0.12;
-            mouse.y += (mouse.targetY - mouse.y) * 0.12;
+            mouse.x += (mouse.targetX - mouse.x) * 0.15;
+            mouse.y += (mouse.targetY - mouse.y) * 0.15;
 
             let dx = mouse.targetX - mouse.x;
             let dy = mouse.targetY - mouse.y;
             mouse.angle = Math.atan2(dy, dx);
 
-            // Update Main Tail (Follows Mouse with slight lag)
             tail.update(mouse.x, mouse.y);
 
-            // Pincers / Front claws Offset logic
-            let pincerAngleSpread = 0.6;
-            let pincerDist = 45;
+            let pincerAngleSpread = 0.5;
+            let pincerDist = 40;
             
-            let leftPincerTargetX = mouse.x + Math.cos(mouse.angle - pincerAngleSpread) * pincerDist + Math.sin(time)*5;
+            let leftPincerTargetX = mouse.x + Math.cos(mouse.angle - pincerAngleSpread) * pincerDist;
             let leftPincerTargetY = mouse.y + Math.sin(mouse.angle - pincerAngleSpread) * pincerDist;
             leftPincer.update(leftPincerTargetX, leftPincerTargetY);
 
-            let rightPincerTargetX = mouse.x + Math.cos(mouse.angle + pincerAngleSpread) * pincerDist + Math.sin(time)*5;
+            let rightPincerTargetX = mouse.x + Math.cos(mouse.angle + pincerAngleSpread) * pincerDist;
             let rightPincerTargetY = mouse.y + Math.sin(mouse.angle + pincerAngleSpread) * pincerDist;
             rightPincer.update(rightPincerTargetX, rightPincerTargetY);
 
-            // Render Components with Killer Cyber Green & Cyan Neon Colors
             tail.draw('#00ffcc', true);
             leftPincer.draw('#00ff66');
             rightPincer.draw('#00ff66');
 
-            // Draw Scorpion 8 Cyber Legs dynamically
-            ctx.save();
+            // Fast Leg rendering loop
             ctx.strokeStyle = '#00ffcc';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00ffcc';
-            ctx.lineWidth = 2;
-
-            // Tail ke middle segments se legs attach honge
-            for (let l = 4; l < 12; l += 2) {
+            for (let l = 3; l < 9; l += 2) {
                 if(tail.x[l]) {
                     let sideAngle = tail.angles[l] + Math.PI/2;
-                    let legLength = 40 + Math.sin(time + l) * 5;
+                    let legLength = 35 + Math.sin(time + l) * 4;
 
-                    // Left Leg
                     ctx.beginPath();
                     ctx.moveTo(tail.x[l], tail.y[l]);
                     ctx.lineTo(tail.x[l] + Math.cos(sideAngle)*legLength, tail.y[l] + Math.sin(sideAngle)*legLength);
-                    ctx.stroke();
-
-                    // Right Leg
-                    ctx.beginPath();
                     ctx.moveTo(tail.x[l], tail.y[l]);
                     ctx.lineTo(tail.x[l] - Math.cos(sideAngle)*legLength, tail.y[l] - Math.sin(sideAngle)*legLength);
                     ctx.stroke();
                 }
             }
-            ctx.restore();
 
             requestAnimationFrame(animate);
         }
